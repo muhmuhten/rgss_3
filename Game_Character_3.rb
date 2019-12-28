@@ -191,38 +191,61 @@ class Game_Character
 	end
 	#--------------------------------------------------------------------------
 	# * Move toward Player
+	# The original routine has been replaced with an A* search with roughly
+	# Manhattan heuristic (see below), vastly improving pathfinding around
+	# obstacles and mazes.
 	#--------------------------------------------------------------------------
-	def move_toward_player
-		# Get difference in player coordinates
-		sx = @x - $game_player.x
-		sy = @y - $game_player.y
-		# If coordinates are equal
-		if sx == 0 and sy == 0
-			return
-		end
-		# Get absolute value of difference
-		abs_sx = sx.abs
-		abs_sy = sy.abs
-		# If horizontal and vertical distances are equal
-		if abs_sx == abs_sy
-			# Increase one of them randomly by 1
-			rand(2) == 0 ? abs_sx += 1 : abs_sy += 1
-		end
-		# If horizontal distance is longer
-		if abs_sx > abs_sy
-			# Move towards player, prioritize left and right directions
-			sx > 0 ? move_left : move_right
-			if not moving? and sy != 0
-				sy > 0 ? move_up : move_down
+	def distance_heuristic(x1, y1, x2, y2)
+		case @direction
+		when 2: @y <=> y1
+		when 4: x1 <=> @x
+		when 6: @x <=> x1
+		when 8: y1 <=> @y
+		else 0
+		end + 4*(x2-x1).abs + 4*(y2-y1).abs - 2
+	end
+	def move_toward_player(px=nil, py=nil, tries = 350)
+		px ||= $game_player.x
+		py ||= $game_player.y
+
+		row = $game_map.width + 1
+		best_candidate = [-distance_heuristic(@x, @y, px, py), @x, @y, 0]
+		seen_cost = Array.new(row * ($game_map.height+1), nil)
+		seen_from = Array.new(row * ($game_map.height+1), nil)
+		seen_cost[@x+@y*row] = 0
+		seen_from[@x+@y*row] = best_candidate
+		frontier = [best_candidate]
+
+		while frontier.length > 0 and tries > 0
+			tries -= 1
+			_, mx, my = frontier.sort!.pop
+			if (mx-px).abs + (my-py).abs == 1
+				best_candidate = seen_from[mx+my*row]
+				break
 			end
-			# If vertical distance is longer
-		else
-			# Move towards player, prioritize up and down directions
-			sy > 0 ? move_up : move_down
-			if not moving? and sx != 0
-				sx > 0 ? move_left : move_right
+
+			new_cost = seen_cost[mx+my*row]-4
+			adj_tiles = [[mx,my+1,2], [mx-1,my,4], [mx+1,my,6], [mx,my-1,8]]
+			adj_tiles.each do |nx, ny, md|
+				idx = nx+ny*row
+				next if seen_cost[idx]
+				next if !passable?(mx, my, md)
+				new_est = new_cost - distance_heuristic(nx, ny, px, py)
+				candidate = [new_est, mx, my, md]
+				best_candidate = candidate if new_est >= best_candidate[0]
+				seen_cost[idx] = new_cost
+				seen_from[idx] = candidate
+				frontier.push([new_est, nx, ny])
 			end
 		end
+
+		_, mx, my, md = best_candidate
+		while mx != @x or my != @y
+			_, mx, my, md = seen_from[mx+my*row]
+		end
+
+		return turn_toward_player(px, py) if md == 0
+		return move_forward(md)
 	end
 	#--------------------------------------------------------------------------
 	# * Move away from Player
@@ -262,8 +285,9 @@ class Game_Character
 	#--------------------------------------------------------------------------
 	# * 1 Step Forward
 	#--------------------------------------------------------------------------
-	def move_forward
-		case @direction
+	def move_forward(direction=nil)
+		direction ||= @direction
+		case direction
 		when 2
 			move_down(false)
 		when 4
@@ -442,10 +466,12 @@ class Game_Character
 	#--------------------------------------------------------------------------
 	# * Turn Towards Player
 	#--------------------------------------------------------------------------
-	def turn_toward_player
+	def turn_toward_player(px=nil, py=nil)
+		px ||= $game_player.x
+		py ||= $game_player.y
 		# Get difference in player coordinates
-		sx = @x - $game_player.x
-		sy = @y - $game_player.y
+		sx = @x - px
+		sy = @y - py
 		# If coordinates are equal
 		if sx == 0 and sy == 0
 			return

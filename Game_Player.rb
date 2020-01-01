@@ -211,16 +211,7 @@ class Game_Player < Game_Character
 		unless moving? or $game_system.map_interpreter.running? or
 				@move_route_forcing or $game_temp.message_window_showing
 			# Move player in the direction the directional button is being pressed
-			case Input.dir4
-			when 2
-				move_down
-			when 4
-				move_left
-			when 6
-				move_right
-			when 8
-				move_up
-			end
+			move_forward(Input.dir4, true)
 		end
 		# Remember coordinates in local variables
 		last_real_x = @real_x

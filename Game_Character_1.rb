@@ -124,10 +124,18 @@ class Game_Character
 	#     d : direction (0,2,4,6,8)
 	#         * 0 = Determines if all directions are impassable (for jumping)
 	#--------------------------------------------------------------------------
+	def new_coords(x, y, d)
+		case d
+		when 0: [x, y]
+		when 2: [x, y+1]
+		when 4: [x-1, y]
+		when 6: [x+1, y]
+		when 8: [x, y-1]
+		end
+	end
 	def passable?(x, y, d)
 		# Get new coordinates
-		new_x = x + (d == 6 ? 1 : d == 4 ? -1 : 0)
-		new_y = y + (d == 2 ? 1 : d == 8 ? -1 : 0)
+		new_x, new_y = new_coords(x, y, d)
 		# If coordinates are outside of map
 		unless $game_map.valid?(new_x, new_y)
 			# impassable

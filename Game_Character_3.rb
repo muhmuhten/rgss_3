@@ -8,186 +8,72 @@
 class Game_Character
 	#--------------------------------------------------------------------------
 	# * Move Down
+	# * Move Left
+	# * Move Right
+	# * Move Up
 	#     turn_enabled : a flag permits direction change on that spot
 	#--------------------------------------------------------------------------
 	def move_down(turn_enabled = true)
-		# Turn down
-		if turn_enabled
-			turn_down
-		end
-		# If passable
-		if passable?(@x, @y, 2)
-			# Turn down
-			turn_down
-			# Update coordinates
-			@y += 1
-			# Increase steps
-			increase_steps
-			# If impassable
-		else
-			# Determine if touch event is triggered
-			check_event_trigger_touch(@x, @y+1)
-		end
+		move_forward(2, turn_enabled)
 	end
-	#--------------------------------------------------------------------------
-	# * Move Left
-	#     turn_enabled : a flag permits direction change on that spot
-	#--------------------------------------------------------------------------
 	def move_left(turn_enabled = true)
-		# Turn left
-		if turn_enabled
-			turn_left
-		end
-		# If passable
-		if passable?(@x, @y, 4)
-			# Turn left
-			turn_left
-			# Update coordinates
-			@x -= 1
-			# Increase steps
-			increase_steps
-			# If impassable
-		else
-			# Determine if touch event is triggered
-			check_event_trigger_touch(@x-1, @y)
-		end
+		move_forward(4, turn_enabled)
 	end
-	#--------------------------------------------------------------------------
-	# * Move Right
-	#     turn_enabled : a flag permits direction change on that spot
-	#--------------------------------------------------------------------------
 	def move_right(turn_enabled = true)
-		# Turn right
-		if turn_enabled
-			turn_right
-		end
-		# If passable
-		if passable?(@x, @y, 6)
-			# Turn right
-			turn_right
-			# Update coordinates
-			@x += 1
-			# Increase steps
-			increase_steps
-			# If impassable
-		else
-			# Determine if touch event is triggered
-			check_event_trigger_touch(@x+1, @y)
-		end
+		move_forward(6, turn_enabled)
 	end
-	#--------------------------------------------------------------------------
-	# * Move up
-	#     turn_enabled : a flag permits direction change on that spot
-	#--------------------------------------------------------------------------
 	def move_up(turn_enabled = true)
-		# Turn up
-		if turn_enabled
-			turn_up
-		end
-		# If passable
-		if passable?(@x, @y, 8)
-			# Turn up
-			turn_up
-			# Update coordinates
-			@y -= 1
-			# Increase steps
-			increase_steps
-			# If impassable
-		else
-			# Determine if touch event is triggered
-			check_event_trigger_touch(@x, @y-1)
-		end
+		move_forward(8, turn_enabled)
 	end
 	#--------------------------------------------------------------------------
 	# * Move Lower Left
-	#--------------------------------------------------------------------------
-	def move_lower_left
-		# If no direction fix
-		unless @direction_fix
-			# Face down is facing right or up
-			@direction = (@direction == 6 ? 4 : @direction == 8 ? 2 : @direction)
-		end
-		# When a down to left or a left to down course is passable
-		if (passable?(@x, @y, 2) and passable?(@x, @y + 1, 4)) or
-				(passable?(@x, @y, 4) and passable?(@x - 1, @y, 2))
-			# Update coordinates
-			@x -= 1
-			@y += 1
-			# Increase steps
-			increase_steps
-		end
-	end
-	#--------------------------------------------------------------------------
 	# * Move Lower Right
-	#--------------------------------------------------------------------------
-	def move_lower_right
-		# If no direction fix
-		unless @direction_fix
-			# Face right if facing left, and face down if facing up
-			@direction = (@direction == 4 ? 6 : @direction == 8 ? 2 : @direction)
-		end
-		# When a down to right or a right to down course is passable
-		if (passable?(@x, @y, 2) and passable?(@x, @y + 1, 6)) or
-				(passable?(@x, @y, 6) and passable?(@x + 1, @y, 2))
-			# Update coordinates
-			@x += 1
-			@y += 1
-			# Increase steps
-			increase_steps
-		end
-	end
-	#--------------------------------------------------------------------------
 	# * Move Upper Left
-	#--------------------------------------------------------------------------
-	def move_upper_left
-		# If no direction fix
-		unless @direction_fix
-			# Face left if facing right, and face up if facing down
-			@direction = (@direction == 6 ? 4 : @direction == 2 ? 8 : @direction)
-		end
-		# When an up to left or a left to up course is passable
-		if (passable?(@x, @y, 8) and passable?(@x, @y - 1, 4)) or
-				(passable?(@x, @y, 4) and passable?(@x - 1, @y, 8))
-			# Update coordinates
-			@x -= 1
-			@y -= 1
-			# Increase steps
-			increase_steps
-		end
-	end
-	#--------------------------------------------------------------------------
 	# * Move Upper Right
 	#--------------------------------------------------------------------------
-	def move_upper_right
-		# If no direction fix
-		unless @direction_fix
-			# Face right if facing left, and face up if facing down
-			@direction = (@direction == 4 ? 6 : @direction == 2 ? 8 : @direction)
+	def move_diagonal(dix, diy)
+		nx, ny = @x, @y
+		case dix
+		when 4: nx -= 1
+		when 6: nx += 1
 		end
-		# When an up to right or a right to up course is passable
-		if (passable?(@x, @y, 8) and passable?(@x, @y - 1, 6)) or
-				(passable?(@x, @y, 6) and passable?(@x + 1, @y, 8))
-			# Update coordinates
-			@x += 1
-			@y -= 1
-			# Increase steps
+		case diy
+		when 2: ny += 1
+		when 8: ny -= 1
+		end
+
+		unless @direction_fix
+			case @direction
+			when 10-dix:
+				@direction = dix
+			when 10-diy:
+				@direction = diy
+			end
+		end
+
+		if (passable?(@x, @y, dix) and passable?(nx, @y, diy)) or
+				(passable?(@x, @y, diy) and passable?(@x, ny, dix))
+			@x, @y = nx, ny
 			increase_steps
 		end
+	end
+	def move_lower_left
+		move_diagonal(4, 2)
+	end
+	def move_lower_right
+		move_diagonal(6, 2)
+	end
+	def move_upper_left
+		move_diagonal(4, 8)
+	end
+	def move_upper_right
+		move_diagonal(6, 8)
 	end
 	#--------------------------------------------------------------------------
 	# * Move at Random
 	#--------------------------------------------------------------------------
 	def move_random
-		case rand(4)
-		when 0  # Move down
-			move_down(false)
-		when 1  # Move left
-			move_left(false)
-		when 2  # Move right
-			move_right(false)
-		when 3  # Move up
-			move_up(false)
-		end
+		move_forward(2+rand(4)*2, false)
 	end
 	#--------------------------------------------------------------------------
 	# * Move toward Player
@@ -225,8 +111,8 @@ class Game_Character
 			end
 
 			new_cost = seen_cost[mx+my*row]-4
-			adj_tiles = [[mx,my+1,2], [mx-1,my,4], [mx+1,my,6], [mx,my-1,8]]
-			adj_tiles.each do |nx, ny, md|
+			[2, 4, 6, 8].each do |md|
+				nx, ny = new_coords(mx, my, md)
 				idx = nx+ny*row
 				next if seen_cost[idx]
 				next if !passable?(mx, my, md)
@@ -285,38 +171,36 @@ class Game_Character
 	#--------------------------------------------------------------------------
 	# * 1 Step Forward
 	#--------------------------------------------------------------------------
-	def move_forward(direction=nil)
-		direction ||= @direction
-		case direction
-		when 2
-			move_down(false)
-		when 4
-			move_left(false)
-		when 6
-			move_right(false)
-		when 8
-			move_up(false)
+	def move_forward(dir=nil, turn_enabled = false)
+		dir ||= @direction
+		case dir
+		when 0: return
+		when 2, 4, 6, 8:
+			new_x, new_y = new_coords(@x, @y, dir)
+			if passable?(@x, @y, dir)
+				turn_generic(dir)
+				@x, @y = new_x, new_y
+				increase_steps
+			else
+				turn_generic(dir) if turn_enabled
+				check_event_trigger_touch(new_x, new_y)
+			end
+		when 1: return move_diagonal(4, 2)
+		when 3: return move_diagonal(6, 2)
+		when 7: return move_diagonal(4, 8)
+		when 9: return move_diagonal(6, 8)
 		end
 	end
 	#--------------------------------------------------------------------------
 	# * 1 Step Backward
 	#--------------------------------------------------------------------------
-	def move_backward
+	def move_backward(dir=nil)
 		# Remember direction fix situation
 		last_direction_fix = @direction_fix
 		# Force directino fix
 		@direction_fix = true
 		# Branch by direction
-		case @direction
-		when 2  # Down
-			move_up(false)
-		when 4  # Left
-			move_right(false)
-		when 6  # Right
-			move_left(false)
-		when 8  # Up
-			move_down(false)
-		end
+		move_forward(10-@direction, false)
 		# Return direction fix situation back to normal
 		@direction_fix = last_direction_fix
 	end
@@ -359,39 +243,26 @@ class Game_Character
 	end
 	#--------------------------------------------------------------------------
 	# * Turn Down
-	#--------------------------------------------------------------------------
-	def turn_down
-		unless @direction_fix
-			@direction = 2
-			@stop_count = 0
-		end
-	end
-	#--------------------------------------------------------------------------
 	# * Turn Left
-	#--------------------------------------------------------------------------
-	def turn_left
-		unless @direction_fix
-			@direction = 4
-			@stop_count = 0
-		end
-	end
-	#--------------------------------------------------------------------------
 	# * Turn Right
-	#--------------------------------------------------------------------------
-	def turn_right
-		unless @direction_fix
-			@direction = 6
-			@stop_count = 0
-		end
-	end
-	#--------------------------------------------------------------------------
 	# * Turn Up
 	#--------------------------------------------------------------------------
+	def turn_generic(dir)
+		return if @direction_fix
+		@direction = dir
+		@stop_count = 0
+	end
+	def turn_down
+		turn_generic(2)
+	end
+	def turn_left
+		turn_generic(4)
+	end
+	def turn_right
+		turn_generic(6)
+	end
 	def turn_up
-		unless @direction_fix
-			@direction = 8
-			@stop_count = 0
-		end
+		turn_generic(8)
 	end
 	#--------------------------------------------------------------------------
 	# * Turn 90° Right
@@ -427,16 +298,7 @@ class Game_Character
 	# * Turn 180°
 	#--------------------------------------------------------------------------
 	def turn_180
-		case @direction
-		when 2
-			turn_up
-		when 4
-			turn_right
-		when 6
-			turn_left
-		when 8
-			turn_down
-		end
+		turn_generic(10-@direction)
 	end
 	#--------------------------------------------------------------------------
 	# * Turn 90° Right or Left
@@ -452,21 +314,12 @@ class Game_Character
 	# * Turn at Random
 	#--------------------------------------------------------------------------
 	def turn_random
-		case rand(4)
-		when 0
-			turn_up
-		when 1
-			turn_right
-		when 2
-			turn_left
-		when 3
-			turn_down
-		end
+		turn_generic(2+range(4)*2)
 	end
 	#--------------------------------------------------------------------------
 	# * Turn Towards Player
 	#--------------------------------------------------------------------------
-	def turn_toward_player(px=nil, py=nil)
+	def turn_toward_player(px=nil, py=nil, reverse = false)
 		px ||= $game_player.x
 		py ||= $game_player.y
 		# Get difference in player coordinates
@@ -476,35 +329,13 @@ class Game_Character
 		if sx == 0 and sy == 0
 			return
 		end
-		# If horizontal distance is longer
-		if sx.abs > sy.abs
-			# Turn to the right or left towards player
-			sx > 0 ? turn_left : turn_right
-			# If vertical distance is longer
-		else
-			# Turn up or down towards player
-			sy > 0 ? turn_up : turn_down
-		end
+		turn_dir = sx.abs > sy.abs ? (sx > 0 ? 4 : 6) : (sy > 0 ? 8 : 2)
+		turn_generic(reverse ? 10-turn_dir : turn_dir)
 	end
 	#--------------------------------------------------------------------------
 	# * Turn Away from Player
 	#--------------------------------------------------------------------------
 	def turn_away_from_player
-		# Get difference in player coordinates
-		sx = @x - $game_player.x
-		sy = @y - $game_player.y
-		# If coordinates are equal
-		if sx == 0 and sy == 0
-			return
-		end
-		# If horizontal distance is longer
-		if sx.abs > sy.abs
-			# Turn to the right or left away from player
-			sx > 0 ? turn_right : turn_left
-			# If vertical distance is longer
-		else
-			# Turn up or down away from player
-			sy > 0 ? turn_down : turn_up
-		end
+		turn_toward_player(nil, nil, true)
 	end
 end

@@ -93,19 +93,18 @@ class Game_Character
 	def move_toward_player(px=nil, py=nil, tries = 350)
 		px ||= $game_player.x
 		py ||= $game_player.y
+		target_dist = passable?(px, py, 0) ? 0 : 1
 
 		row = $game_map.width + 1
 		best_candidate = [-distance_heuristic(@x, @y, px, py), @x, @y, 0]
-		seen_cost = Array.new(row * ($game_map.height+1), nil)
-		seen_from = Array.new(row * ($game_map.height+1), nil)
-		seen_cost[@x+@y*row] = 0
-		seen_from[@x+@y*row] = best_candidate
+		seen_cost = {@x+@y*row=>0}
+		seen_from = {@x+@y*row=>best_candidate}
 		frontier = [best_candidate]
 
 		while frontier.length > 0 and tries > 0
 			tries -= 1
 			_, mx, my = frontier.sort!.pop
-			if (mx-px).abs + (my-py).abs == 1
+			if (mx-px).abs + (my-py).abs == target_dist
 				best_candidate = seen_from[mx+my*row]
 				break
 			end
@@ -130,8 +129,12 @@ class Game_Character
 			_, mx, my, md = seen_from[mx+my*row]
 		end
 
-		return turn_toward_player(px, py) if md == 0
-		return move_forward(md)
+		if md == 0
+			turn_toward_player(px, py)
+			move_forward if !passable?(@x, @y, @direction)
+		else
+			move_forward(md)
+		end
 	end
 	#--------------------------------------------------------------------------
 	# * Move away from Player

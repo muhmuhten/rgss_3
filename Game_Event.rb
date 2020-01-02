@@ -38,7 +38,7 @@ class Game_Event < Game_Character
 	end
 	#--------------------------------------------------------------------------
 	# * Determine if Over Trigger
-	#    (whether or not same position is starting condition)
+	#    (whether event is triggered when standing over it, or when facing)
 	#--------------------------------------------------------------------------
 	def over_trigger?
 		# If not through situation with character as graphic

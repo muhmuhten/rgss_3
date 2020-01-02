@@ -20,18 +20,11 @@ class Game_Player < Game_Character
 	#         * 0 = Determines if all directions are impassable (for jumping)
 	#--------------------------------------------------------------------------
 	def passable?(x, y, d)
-		# Get new coordinates
-		new_x = x + (d == 6 ? 1 : d == 4 ? -1 : 0)
-		new_y = y + (d == 2 ? 1 : d == 8 ? -1 : 0)
-		# If coordinates are outside of map
-		unless $game_map.valid?(new_x, new_y)
-			# Impassable
-			return false
-		end
 		# If debug mode is ON and ctrl key was pressed
 		if $DEBUG and Input.press?(Input::CTRL)
-			# Passable
-			return true
+			# Get new coordinates
+			new_x, new_y = new_coords(x, y, d)
+			return $game_map.valid?(new_x, new_y)
 		end
 		super
 	end
@@ -113,86 +106,40 @@ class Game_Player < Game_Character
 	# * Same Position Starting Determinant
 	#--------------------------------------------------------------------------
 	def check_event_trigger_here(triggers)
-		result = false
-		# If event is running
-		if $game_system.map_interpreter.running?
-			return result
-		end
-		# All event loops
-		for event in $game_map.events.values
-			# If event coordinates and triggers are consistent
-			if event.x == @x and event.y == @y and triggers.include?(event.trigger)
-				# If starting determinant is same position event (other than jumping)
-				if not event.jumping? and event.over_trigger?
-					event.start
-					result = true
-				end
-			end
-		end
-		return result
+		check_event_trigger_touch(@x, @y, triggers, true)
 	end
 	#--------------------------------------------------------------------------
 	# * Front Envent Starting Determinant
 	#--------------------------------------------------------------------------
 	def check_event_trigger_there(triggers)
-		result = false
-		# If event is running
-		if $game_system.map_interpreter.running?
-			return result
-		end
-		# Calculate front event coordinates
-		new_x = @x + (@direction == 6 ? 1 : @direction == 4 ? -1 : 0)
-		new_y = @y + (@direction == 2 ? 1 : @direction == 8 ? -1 : 0)
-		# All event loops
-		for event in $game_map.events.values
-			# If event coordinates and triggers are consistent
-			if event.x == new_x and event.y == new_y and
-					triggers.include?(event.trigger)
-				# If starting determinant is front event (other than jumping)
-				if not event.jumping? and not event.over_trigger?
-					event.start
-					result = true
-				end
-			end
-		end
+		new_x, new_y = new_coords(@x, @y, @direction)
 		# If fitting event is not found
-		if result == false
+		if !check_event_trigger_touch(new_x, new_y, triggers)
 			# If front tile is a counter
 			if $game_map.counter?(new_x, new_y)
 				# Calculate 1 tile inside coordinates
-				new_x += (@direction == 6 ? 1 : @direction == 4 ? -1 : 0)
-				new_y += (@direction == 2 ? 1 : @direction == 8 ? -1 : 0)
-				# All event loops
-				for event in $game_map.events.values
-					# If event coordinates and triggers are consistent
-					if event.x == new_x and event.y == new_y and
-							triggers.include?(event.trigger)
-						# If starting determinant is front event (other than jumping)
-						if not event.jumping? and not event.over_trigger?
-							event.start
-							result = true
-						end
-					end
-				end
+				new_x, new_y = new_coords(new_x, new_y, @direction)
+				return check_event_trigger_touch(new_x, new_y, triggers)
 			end
+		else
+			return true
 		end
-		return result
 	end
 	#--------------------------------------------------------------------------
 	# * Touch Event Starting Determinant
 	#--------------------------------------------------------------------------
-	def check_event_trigger_touch(x, y)
-		result = false
+	def check_event_trigger_touch(x, y, triggers=[1,2], over_trigger=false)
 		# If event is running
 		if $game_system.map_interpreter.running?
-			return result
+			return false
 		end
+		result = false
 		# All event loops
 		for event in $game_map.events.values
 			# If event coordinates and triggers are consistent
-			if event.x == x and event.y == y and [1,2].include?(event.trigger)
+			if event.x == x and event.y == y and triggers.include?(event.trigger)
 				# If starting determinant is front event (other than jumping)
-				if not event.jumping? and not event.over_trigger?
+				if not event.jumping? and event.over_trigger? == over_trigger
 					event.start
 					result = true
 				end

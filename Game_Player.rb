@@ -22,11 +22,17 @@ class Game_Player < Game_Character
 	def passable?(x, y, d)
 		# If debug mode is ON and ctrl key was pressed
 		if $DEBUG and Input.press?(Input::CTRL)
-			# Get new coordinates
-			new_x, new_y = new_coords(x, y, d)
-			return $game_map.valid?(new_x, new_y)
+			return move_in_map?(x, y, d)
 		end
 		super
+	end
+	#--------------------------------------------------------------------------
+	# * Position after movement remains in map
+	#--------------------------------------------------------------------------
+	def move_in_map?(x, y, d)
+		# Get new coordinates
+		new_x, new_y = new_coords(x, y, d)
+		return $game_map.valid?(new_x, new_y)
 	end
 	#--------------------------------------------------------------------------
 	# * Set Map Display Position to Center of Screen
@@ -106,7 +112,90 @@ class Game_Player < Game_Character
 	# * Same Position Starting Determinant
 	#--------------------------------------------------------------------------
 	def check_event_trigger_here(triggers)
-		check_event_trigger_touch(@x, @y, triggers, true)
+		if check_event_trigger_touch(@x, @y, triggers, true)
+			return true
+		end
+
+		# Attempt map edge transfer when moved to edge and facing out of bounds
+		if !move_in_map?(@x, @y, @direction) and triggers.include?(1)
+			$data_geography ||= load_data("Data/Map001.rxdata")
+			index = Table.new($data_geography.width, $data_geography.height)
+			match_xs, match_ys = {}, {}
+			for event in $data_geography.events.values
+				map_id = event.pages[0].condition.variable_value
+				index[event.x, event.y] = map_id
+				if map_id == $game_map.map_id and not event.pages[0].through
+					match_xs[event.x] = match_ys[event.y] = event.id
+				end
+			end
+			return false if match_xs.size <= 0
+
+			case @direction
+			when 2, 8:
+				old_width = $game_map.width
+				old_min_x = match_xs.min[0]
+				old_len = match_xs.max[0]+1 - old_min_x
+				geo_y = @direction == 2 ? match_ys.max[0]+1 : match_ys.min[0]-1
+				geo_x = old_min_x + old_len * @x / old_width
+
+				map_id = index[geo_x, geo_y]
+				return false if map_id <= 0
+
+				new_min_x = new_max_x = geo_x
+				new_min_x -= 1 while index[new_min_x-1, geo_y] == map_id
+				new_max_x += 1 while index[new_max_x+1, geo_y] == map_id
+				new_len = new_max_x+1 - new_min_x
+
+				$game_map.setup(map_id)
+				# geo_x = old_min_x + old_len * (@x+0.5)/old_width
+				# new_x = (geo_x - new_min_x) / new_len * new_width
+				new_x = ((old_min_x - new_min_x) * 2*old_width + (2*@x+1) * old_len) * $game_map.width / (2*new_len*old_width)
+				new_y = @direction == 2 ? 0 : $game_map.height-1
+
+				$game_temp.player_transferring = true
+				$game_temp.player_new_map_id = map_id
+				$game_temp.player_new_x = new_x
+				$game_temp.player_new_y = new_y
+				$game_temp.player_new_direction = @direction
+				$game_temp.transition_processing = true
+				$game_temp.transition_name = ""
+				Graphics.freeze
+				return true
+
+			when 4, 6:
+				old_height = $game_map.height
+				old_min_y = match_ys.min[0]
+				old_len = match_ys.max[0]+1 - old_min_y
+				geo_x = @direction == 4 ? match_xs.min[0]-1 : match_xs.max[0]+1
+				geo_y = old_min_y + old_len * @y / old_height
+
+				map_id = index[geo_x, geo_y]
+				return false if map_id <= 0
+
+				new_min_y = new_max_y = geo_y
+				new_min_y -= 1 while index[geo_x, new_min_y-1] == map_id
+				new_max_y += 1 while index[geo_x, new_max_y+1] == map_id
+				new_len = new_max_y+1 - new_min_y
+
+				$game_map.setup(map_id)
+				new_x = @direction == 4 ? $game_map.width-1 : 0
+				# geo_y = old_min_y + (@y+0.5)/old_height * old_len
+				# new_y = (geo_y - new_min_y) / new_len * new_height
+				new_y = ((old_min_y - new_min_y) * 2*old_height + (2*@y+1) * old_len) * $game_map.height / (2*new_len*old_height)
+
+				$game_temp.player_transferring = true
+				$game_temp.player_new_map_id = map_id
+				$game_temp.player_new_x = new_x
+				$game_temp.player_new_y = new_y
+				$game_temp.player_new_direction = @direction
+				$game_temp.transition_processing = true
+				$game_temp.transition_name = ""
+				Graphics.freeze
+				return true
+			end
+		end
+
+		return false
 	end
 	#--------------------------------------------------------------------------
 	# * Front Envent Starting Determinant

@@ -42,17 +42,22 @@ class Game_Character
 		when 8: ny -= 1
 		end
 
+		x_passable = passable?(@x, @y, dix) && passable?(nx, @y, diy)
+		y_passable = passable?(@x, @y, diy) && passable?(@x, ny, dix)
+
 		unless @direction_fix
-			case @direction
-			when 10-dix:
-				@direction = dix
-			when 10-diy:
+			if x_passable && !y_passable
 				@direction = diy
+			elsif y_passable && !x_passable
+				@direction = dix
+			elsif @direction == 10 - dix
+				@direction = diy
+			elsif @direction == 10 - diy
+				@direction = dix
 			end
 		end
 
-		if (passable?(@x, @y, dix) and passable?(nx, @y, diy)) or
-				(passable?(@x, @y, diy) and passable?(@x, ny, dix))
+		if x_passable or y_passable
 			@x, @y = nx, ny
 			increase_steps
 		end
